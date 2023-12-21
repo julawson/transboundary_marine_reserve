@@ -1,0 +1,314 @@
+
+# Single Value of x_a and x_b
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(knitr)
+library(stargazer)
+library(reshape2)
+library(cowplot)
+library(akima)
+```
+
+# Starting values for single value analysis
+
+```{r}
+
+x_a_init = 66
+x_b_init = 77
+
+e_a_star = 17.80803
+```
+
+# Non-Cooperative Scenario
+
+```{r}
+
+# Initialize data frame for storing results
+
+results_non <- tibble(
+  timestep = integer(), 
+  x_a_init = numeric(),
+  x_a = numeric(), 
+  h_a = numeric(), 
+  e_hat_a = numeric(), 
+  x_b_init = numeric(),
+  x_b = numeric(), 
+  h_b = numeric(), 
+  e_hat_b = numeric(),
+  NPV_a_hat = numeric(),
+  NPV_b_hat = numeric()
+)
+
+# Initialize NPV variables
+NPV_a_hat <- 0
+NPV_b_hat <- 0
+
+# Storing initial values
+ x_a <- x_a_init
+ x_b <- x_b_init
+    
+    for(t in 1:timesteps) {
+  
+  # Calculate e_hat_a and e_hat_b
+  e_hat_values <- compute_e_hat(x_a, x_b, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, mu_b, M_bb, sigma_b, D_bb, k_b, r_b, delta)
+  
+  # Calculate harvest based on e_hat
+  h_a_val = h_a(x_a, e_hat_values$e_hat_a)
+  h_b_val = h_b(x_b, e_hat_values$e_hat_b)
+  
+  # Escapement
+  e_hat_a = e_a(x_a, h_a_val)
+  e_hat_b = e_b(x_b, h_b_val)
+  
+  # Update stocks in each patch
+  x_a_new = next_x_a(e_hat_a, e_hat_b) - mu_a*M_aa*e_hat_a - mu_b*M_ba*e_hat_b + mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b
+  x_b_new = next_x_b(e_hat_a, e_hat_b) - mu_b*M_bb*e_hat_b - mu_a*M_ab*e_hat_a + mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a
+  
+  # Value
+  V_a_hat = b_a(p_a, c_a) * (x_a - e_hat_values$e_hat_a) * delta^(t-1)
+  V_b_hat = b_b(p_b, c_b) * (x_b - e_hat_values$e_hat_b) * delta^(t-1)
+      
+  # Update NPV
+  NPV_a_hat <- NPV_a_hat + V_a_hat
+  NPV_b_hat <- NPV_b_hat + V_b_hat
+  
+  # Save results including e_hat_a and e_hat_b
+  results_non <- results_non %>%
+    add_row(
+      timestep = t,
+      x_a_init = x_a_init,
+      x_a = x_a,
+      h_a = h_a_val,
+      x_b_init = x_b_init,
+      x_b = x_b,
+      h_b = h_b_val,
+      e_hat_a = e_hat_values$e_hat_a,
+      e_hat_b = e_hat_values$e_hat_b,
+      NPV_a_hat = NPV_a_hat,
+      NPV_b_hat = NPV_b_hat
+    )
+    
+  # Update the stock for next iteration
+  x_a <- x_a_new
+  x_b <- x_b_new
+}
+
+# View results
+print(results_non)
+
+df_results_non = results_non %>% filter(timestep==100) %>% select(-timestep)
+
+```
+
+# Cooperative Scenario (Sole Owner Both Patches Scenario)
+
+```{r}
+
+# Initialize data frame for storing results
+
+results_so <- tibble(
+  timestep = integer(), 
+  x_a_init = numeric(),
+  x_a = numeric(), 
+  h_a = numeric(), 
+  e_star_a = numeric(), 
+  x_b_init = numeric(),
+  x_b = numeric(), 
+  h_b = numeric(), 
+  e_star_b = numeric(),
+  NPV_a_star = numeric(),
+  NPV_b_star = numeric()
+)
+
+# Initialize NPV variables
+NPV_a_star <- 0
+NPV_b_star <- 0
+
+# Storing initial values
+ x_a <- x_a_init
+ x_b <- x_b_init
+    
+    for(t in 1:timesteps) {
+  
+  # Calculate e_star_a and e_star_b
+  e_star_values <- compute_e_star(x_a, x_b, p_a, c_a, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, p_b, c_b, mu_b, M_ab, M_ba, sigma_b, D_ab, D_ba, delta)
+  
+  # Calculate harvest based on e_star
+  h_a_val = h_a(x_a, e_star_values$e_star_a)
+  h_b_val = h_b(x_b, e_star_values$e_star_b)
+  
+  # Escapement
+  e_star_a = e_a(x_a, h_a_val)
+  e_star_b = e_b(x_b, h_b_val)
+  
+  # Update stocks in each patch
+  x_a_new = next_x_a(e_star_a, e_star_b) - mu_a*M_aa*e_star_a - mu_b*M_ba*e_star_b + mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b
+  x_b_new = next_x_b(e_star_a, e_star_b) - mu_b*M_bb*e_star_b - mu_a*M_ab*e_star_a + mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a
+  
+  # Value
+  V_a_star = b_a(p_a, c_a) * (x_a - e_star_values$e_star_a) * delta^(t-1)
+  V_b_star = b_b(p_b, c_b) * (x_b - e_star_values$e_star_b) * delta^(t-1)
+      
+  # Update NPV
+  NPV_a_star <- NPV_a_star + V_a_star
+  NPV_b_star <- NPV_b_star + V_b_star
+  
+  # Save results including e_star_a and e_star_b
+  results_so <- results_so %>%
+    add_row(
+      timestep = t,
+      x_a_init = x_a_init,
+      x_a = x_a,
+      h_a = h_a_val,
+      x_b_init = x_b_init,
+      x_b = x_b,
+      h_b = h_b_val,
+      e_star_a = e_star_values$e_star_a,
+      e_star_b = e_star_values$e_star_b,
+      NPV_a_star = NPV_a_star,
+      NPV_b_star = NPV_b_star
+    )
+    
+  # Update the stock for next iteration
+  x_a <- x_a_new
+  x_b <- x_b_new
+  
+    }
+
+
+# View results
+print(results_so)
+
+df_results_so = results_so %>% filter(timestep==100) %>% select(-timestep)
+
+```
+
+```{r}
+
+#df_all = data.frame()
+#V_next = matrix(0, size_x_a, size_x_b)
+#V = matrix(0, size_x_a, size_x_b)
+
+#for(t in T:1) {
+#  for(i in 1:size_x_a) {
+#    x_a = x_a_grid[i]
+#    for(j in 1:size_x_b) {
+#      x_b = x_b_grid[j]
+#      guess = x_a/2
+#      low = 0 #lower bound on escapement in A
+#      high = x_a #upper bound on escapement in A
+#      Thing = optim(par=guess, fn=payoff, lower=low, upper=high, x_a=x_a, x_b=x_b, V=V, method='L-BFGS-B')
+#      e_a_star = Thing$par
+#      V_star = -Thing$value
+#      V_next[i,j] = V_star
+#      df_now = data.frame(time=t, x_a=x_a, x_b=x_b, e_a_star=e_a_star, V_star=V_star)
+#      df_all = rbind(df_all, df_now)
+#    }
+#  }
+#  V = V_next
+#}
+
+#df_inf = df_all %>% filter(time==1) %>% select(-time, -V_star) %>% add_column(timestep=1)
+
+
+```
+
+#II. Sole Owner Patch A (Reserve Scenario)
+
+```{r}
+# Initialize data frame for storing results
+results_soa <- tibble(
+  timestep = integer(), 
+  x_a_init = numeric(),
+  x_a = numeric(), 
+  h_a = numeric(), 
+  e_a_star = numeric(), 
+  x_b_init = numeric(),
+  x_b = numeric(), 
+  h_b = numeric(), 
+  #e_b_star = numeric(),
+  NPV_ea_star = numeric(),
+  NPV_eb_star = numeric()
+)
+
+# Initialize NPV variables
+NPV_ea_star <- 0
+NPV_eb_star <- 0
+
+# Storing initial values
+ x_a <- x_a_init
+ x_b <- x_b_init
+ e_a_star <- e_a_star
+    
+    for(t in 1:timesteps) {
+  
+  # Calculate harvest based on e_star
+  h_a_val = h_a(x_a, e_a_star)
+  h_b_val = h_b(x_b, x_b)
+  
+  # Update stocks in each patch
+  x_a_new = next_x_a(e_a_star, x_b) - mu_a*M_aa*e_a_star - mu_b*M_ba*x_b + mu_a*M_aa*e_a_star + mu_b*M_ba*x_b
+  x_b_new = next_x_b(e_a_star, x_b) - mu_b*M_bb*x_b - mu_a*M_ab*e_a_star + mu_b*M_bb*x_b + mu_a*M_ab*e_a_star
+  
+  # Value
+  V_a_star = b_a(p_a, c_a) * (x_a - e_a_star) * delta^(t-1)
+  V_b_star = b_b(p_b, c_b) * (x_b) * delta^(t-1)
+  
+  # Update NPV
+  NPV_ea_star <- NPV_ea_star + V_a_star
+  NPV_eb_star <- NPV_eb_star + V_b_star
+  
+  # Save results
+  results_soa <- results_soa %>%
+    add_row(
+      timestep = t,
+      x_a_init = x_a_init,
+      x_a = x_a,
+      h_a = h_a_val,
+      x_b_init = x_b_init,
+      x_b = x_b,
+      h_b = h_b_val,
+      e_a_star = e_a_star,
+      #e_b_star = e_b_star,
+      NPV_ea_star = NPV_ea_star,
+      NPV_eb_star = NPV_eb_star
+    )
+    
+  # Update the stock for next iteration
+  x_a <- x_a_new
+  x_b <- x_b_new
+  
+    }
+
+# View results
+print(results_soa)
+
+df_results_soa = results_soa %>% filter(timestep==100) %>% select(-timestep) 
+
+```
+
+# Calculate Final Results
+
+```{r}
+
+# Changing the name of x_a_init and x_b_init to just x_a and x_b for simplicity. 
+df_results_non_bind = df_results_non %>% select(-h_a, -h_b) %>% rename (x_a_non = x_a) %>% rename (x_b_non = x_b)
+df_results_so_bind = df_results_so %>% select(-h_a, -h_b) %>% rename (x_a_so = x_a) %>% rename (x_b_so = x_b)
+df_results_ea_bind = df_results_soa %>% select(-h_a, -h_b) %>% rename (x_a_soa = x_a) %>% rename (x_b_soa = x_b)
+
+# Merging e_a_star values from df_inf into results based on x_a and x_b
+results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("x_a_init", "x_b_init")) %>% 
+  left_join(df_results_ea_bind, by= c("x_a_init", "x_b_init")) %>% 
+  mutate(WTP_A = NPV_ea_star-NPV_a_hat,
+         WTA_B = NPV_b_hat) %>% 
+  mutate(accept = WTP_A-WTA_B) %>% 
+  mutate(reserve_npv_coop = (NPV_ea_star) - (NPV_a_star + NPV_b_star)) %>% 
+  mutate(reserve_npv_non = (NPV_ea_star) -(NPV_a_hat + NPV_b_hat)) %>% 
+  mutate(reserve_vs_non_x = (x_a_soa + x_b_soa) - (x_a_non + x_b_non)) %>% 
+  mutate(reserve_vs_coop_x = (x_a_so + x_a_so) - (x_a_non + x_b_non)) 
+
+```

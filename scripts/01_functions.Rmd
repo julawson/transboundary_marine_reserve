@@ -1,0 +1,130 @@
+
+# II. General Functions
+
+```{r}
+
+# Escapement Function
+e_a = function(x_a, h_a) {
+  e_a = x_a - h_a
+  e_a = ifelse(e_a < 0, 0, ifelse(e_a > x_a, x_a, e_a))
+  return(e_a)
+}
+
+e_b = function(x_b, h_b) {
+  e_b = x_b - h_b
+  e_b = ifelse(e_b < 0, 0, ifelse(e_b > x_b, x_b, e_b))
+  return(e_b)
+}
+
+# Harvest Function, can't be negative.
+h_a = function(x_a, e_a) {
+  h_a = x_a - e_a
+  h_a = ifelse(h_a < 0, 0, h_a)
+  return(h_a)
+}
+
+h_b = function(x_b, e_b) {
+  h_b = x_b - e_b
+  h_b = ifelse(h_b < 0, 0, h_b)
+  return(h_b)
+}
+
+
+# Growth Function
+
+growth_a = function(e_a)
+{
+  y_a = r_a*e_a*(1-e_a/k_a)
+  if (y_a < 0) {
+    y_a = 0
+  }
+  return(y_a)
+}
+
+growth_b = function(e_b)
+{
+  y_b = r_b*e_b*(1-e_b/k_b)
+  if (y_b < 0) {
+    y_b = 0
+  }
+  return(y_b)
+}
+
+# Stock in Next Time Step
+
+next_x_a = function(e_a,e_b)
+{
+  x_a_new = mu_a*M_aa*e_a + mu_b*M_ba*e_b + sigma_a*(D_aa*growth_a(e_a) + D_ba*growth_b(e_b))
+  x_a_new = min(x_a_new, k_a)
+  return(x_a_new)
+}
+
+next_x_b = function(e_a,e_b)
+{
+  x_b_new = mu_b*M_bb*e_b + mu_a*M_ab*e_a + sigma_b*(D_bb*growth_b(e_b) + D_ab*growth_a(e_a))
+  x_b_new = min(x_b_new, k_b)
+  return(x_b_new)
+}
+
+# Marginal Profit Function
+
+b_a = function(p_a, c_a) {
+  return(p_a - c_a)
+}
+
+b_b = function(p_b, c_b) {
+  return(p_b - c_b)
+}
+
+
+
+# III. Scenario Functions
+
+# Sole Owner Scenario
+
+compute_e_star <- function(x_a, x_b, p_a, c_a, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, p_b, c_b, mu_b, M_ab, M_ba, sigma_b, D_ab, D_ba, delta) {
+  
+  phi_a <- (b_a(p_a, c_a) / delta - b_a(p_a, c_a) * mu_a * M_aa - b_b(p_b, c_b) * mu_a * M_ab) / 
+           (b_a(p_a, c_a) * sigma_a * D_aa + b_b(p_b, c_b) * sigma_b * D_ab)
+  
+  phi_b <- (b_b(p_b, c_b) / delta - b_b(p_b, c_b) * mu_b * M_bb - b_a(p_a, c_a) * mu_b * M_ba) / 
+           (b_b(p_b, c_b) * sigma_b * D_bb + b_a(p_a, c_a) * sigma_a * D_ba)
+  
+  e_star_a <- min(max((k_a * (r_a - phi_a)) / (2 * r_a), 0), x_a) #Escapement must be greater than zero and can't be greater than carrying capacity
+  e_star_b <- min(max((k_b * (r_b - phi_b)) / (2 * r_b), 0), x_b)
+  
+  return(list(e_star_a = e_star_a, e_star_b = e_star_b))
+}
+
+# Non-cooperative Scenario
+
+compute_e_hat <- function(x_a, x_b, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, mu_b, M_bb, sigma_b, D_bb, k_b, r_b, delta) {
+  
+  phi_hat_a <- (1 / delta - mu_a * M_aa) / (sigma_a * D_aa)
+  phi_hat_b <- (1 / delta - mu_b * M_bb) / (sigma_b * D_bb)
+  
+  e_hat_a <- min(max((k_a * (r_a - phi_hat_a)) / (2 * r_a), 0), x_a)
+  e_hat_b <- min(max((k_b * (r_b - phi_hat_b)) / (2 * r_b), 0), x_b)
+  
+  return(list(e_hat_a = e_hat_a, e_hat_b = e_hat_b))
+}
+
+# Patch A Sole Owner Scenario
+# Profit function (A only)
+
+pi_a = function(x_a, e_a)
+{
+  profit_a = b_a(p_a, c_a)*(x_a-e_a)
+  return(profit_a)
+}
+
+payoff = function(e_a, x_a, x_b, V)
+{
+  x_a_new = next_x_a(e_a=e_a, e_b=x_b) #e_b=x_b because B is a reserve
+  x_b_new = next_x_b(e_a=e_a, e_b=x_b) #e_b=x_b because B is a reserve
+  V_next =  bilinear(x_a_grid, x_b_grid, V, x_a_new, x_b_new)
+  negout = -(pi_a(x_a=x_a, e_a=e_a) + delta*V_next$z) 
+  return(negout)
+}
+
+```
