@@ -240,37 +240,37 @@ df_inf = df_all %>% filter(time==1) %>% select(-time, -V_star)
 
 ```{r}
 
-#df_int = df_inf |> mutate(xab = x_a * x_b) 
+df_int = df_inf |> mutate(xab = x_a * x_b) 
 
-#interp_model <- mgcv::gam(e_a_star ~ s(x_a) + s(x_b) + s(xab), data = df_int)
+interp_model <- mgcv::gam(e_a_star ~ s(x_a) + s(x_b) + s(xab), data = df_int)
 
-#interp_frame <-
+interp_frame <-
 
-#    data.frame(x_a = x_a, x_b = x_b, xab = x_a * x_b)
+    data.frame(x_a = x_a, x_b = x_b, xab = x_a * x_b)
 
-#e_a_star <- pmax(min(df_int$e_a_star),predict(interp_model, newdata = interp_frame))
+e_a_star <- pmax(min(df_int$e_a_star),predict(interp_model, newdata = interp_frame))
 
 # 1. Create a new dataframe for the grid values
-#grid_df <- expand.grid(x_a = seq(small, k_a,length.out=size_x_a), x_b = seq(small, k_b,length.out=size_x_b))
+grid_df <- expand.grid(x_a = seq(small, k_a,length.out=size_x_a), x_b = seq(small, k_b,length.out=size_x_b))
 
 # 2. Calculate the interaction term xab for the grid
-#grid_df$xab <- grid_df$x_a * grid_df$x_b
+grid_df$xab <- grid_df$x_a * grid_df$x_b
 
 # 3. Predict e_a_star for the entire grid
-#predicted_e_a_star <- predict(interp_model, newdata = grid_df)
+predicted_e_a_star <- predict(interp_model, newdata = grid_df)
 
 # 4. Merge the interpolated e_a_star values with df_results_so_ea based on x_a and x_b
-#df_e_a_star_interpolated <- merge(grid_df, df_int, by.x = c("x_a", "x_b"), by.y = c("x_a", "x_b"), all.x = TRUE)
+df_e_a_star_interpolated <- merge(grid_df, df_int, by.x = c("x_a", "x_b"), by.y = c("x_a", "x_b"), all.x = TRUE)
 
 # Replace the NAs in df_results_so_ea_interpolated with the interpolated values
-#df_e_a_star_interpolated$e_a_star <- ifelse(is.na(df_e_a_star_interpolated$e_a_star), predicted_e_a_star, df_e_a_star_interpolated$e_a_star)
+df_e_a_star_interpolated$e_a_star <- ifelse(is.na(df_e_a_star_interpolated$e_a_star), predicted_e_a_star, df_e_a_star_interpolated$e_a_star)
 
 # Replace negative values of e_a_star with 0
-#df_e_a_star_interpolated$e_a_star <- pmax(df_e_a_star_interpolated$e_a_star, 0)
+df_e_a_star_interpolated$e_a_star <- pmax(df_e_a_star_interpolated$e_a_star, 0)
 
-#df_e_a_star_int <- df_e_a_star_interpolated %>% select(x_a, x_b, e_a_star)
+df_e_a_star_int <- df_e_a_star_interpolated %>% select(x_a, x_b, e_a_star)
 
-#print(df_e_a_star_int)
+print(df_e_a_star_int)
 
 ```
 
@@ -294,7 +294,7 @@ NPV_eb_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
 names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 names(NPV_eb_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 
-matrix_df = dcast(df_inf, x_a ~ x_b, value.var = "e_a_star")
+matrix_df = dcast(df_e_a_star_int, x_a ~ x_b, value.var = "e_a_star")
 rownames(matrix_df) = x_a_grid
 matrix_df = matrix_df[, -1]
 
@@ -329,6 +329,10 @@ for(i in seq_along(x_a_grid)) {
     
     for(t in 1:timesteps) {
   
+  initial_e_a_star <- matrix_df[i, j]
+      
+  e_a_star <- ifelse(matrix_df[i, j] > x_a, x_a, matrix_df[i, j])    
+      
   # Calculate harvest based on e_star
   h_a_val = h_a(x_a, e_a_star)
   h_b_val = h_b(x_b, x_b)
@@ -398,7 +402,7 @@ results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("M_ab", "
 
 ```{r}
 
-#write.csv(results, here("data","outputs","mvmt_pt11.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","mvmt_pt10.csv"), row.names=FALSE)
 
 ```
 

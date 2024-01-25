@@ -17,27 +17,27 @@ library(akima)
 
 ```{r}
 
-# Calculate the number of iterations over D_ba
-num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
+# Calculate the number of iterations over M_ba
+num_M_ba_iterations <- length(seq(0, 1, by = 0.1))
 
 # Calculate the number of rows
-num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * num_D_ba_iterations
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * num_M_ba_iterations
 num_cols <- 12
 results_matrix_non <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
-colnames(results_matrix_non) <- c("D_ba", "timestep", "x_a_init", "x_a", "h_a", "e_hat_a", "x_b_init", "x_b", "h_b", "e_hat_b", "NPV_a_hat", "NPV_b_hat")
+colnames(results_matrix_non) <- c("M_ba", "timestep", "x_a_init", "x_a", "h_a", "e_hat_a", "x_b_init", "x_b", "h_b", "e_hat_b", "NPV_a_hat", "NPV_b_hat")
 
 row_counter <- 1
 
 # Initialize variables to store NPV for each x_a and x_b combination
-NPV_a_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid) * num_D_ba_iterations)
-NPV_b_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid) * num_D_ba_iterations)
-names(NPV_a_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations)
-names(NPV_b_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations)
+NPV_a_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid) * num_M_ba_iterations)
+NPV_b_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid) * num_M_ba_iterations)
+names(NPV_a_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations)
+names(NPV_b_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations)
 
-for(D_ba in seq(0, 1, by = 0.1)) {
+for(M_ba in seq(0, 1, by = 0.1)) {
       
     # Recalculate dependent variables
-    D_bb = 1 - D_ba
+    M_bb = 1 - M_ba
 
     # Grid search over x_a_grid and x_b_grid
     for(i in seq_along(x_a_grid)) {
@@ -80,7 +80,7 @@ for(D_ba in seq(0, 1, by = 0.1)) {
                 NPV_b_hat <- NPV_b_hat + V_b_hat
   
                 # Save results including e_hat_a and e_hat_b
-                results_matrix_non[row_counter, ] <- c(D_ba, t, x_a_init, x_a, h_a_val, e_hat_values$e_hat_a, x_b_init, x_b, h_b_val, e_hat_values$e_hat_b, NPV_a_hat, NPV_b_hat)
+                results_matrix_non[row_counter, ] <- c(M_ba, t, x_a_init, x_a, h_a_val, e_hat_values$e_hat_a, x_b_init, x_b, h_b_val, e_hat_values$e_hat_b, NPV_a_hat, NPV_b_hat)
                 row_counter <- row_counter + 1
     
                 # Update the stock for the next iteration
@@ -88,8 +88,8 @@ for(D_ba in seq(0, 1, by = 0.1)) {
                 x_b <- x_b_new
             }
     
-            # Store NPV for the current x_a, x_b, and D_ba combination
-            index <- (i - 1) * length(x_b_grid) * num_D_ba_iterations + (j - 1) * num_D_ba_iterations + round(D_ba * 10) + 1
+            # Store NPV for the current x_a, x_b, and M_ba combination
+            index <- (i - 1) * length(x_b_grid) * num_M_ba_iterations + (j - 1) * num_M_ba_iterations + round(M_ba * 10) + 1
             NPV_a_hat_total[index] <- NPV_a_hat
             NPV_b_hat_total[index] <- NPV_b_hat
     
@@ -105,28 +105,28 @@ df_results_non <- as.data.frame(results_matrix_non) %>% filter(timestep == 100) 
 
 ```{r}
 
-# Calculate the number of iterations over D_ba
-num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
+# Calculate the number of iterations over M_ba
+num_M_ba_iterations <- length(seq(0, 1, by = 0.1))
 
 # Initialize data frame for storing results
 
-num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * num_D_ba_iterations
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * num_M_ba_iterations
 num_cols <- 12  
 results_matrix_so <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
-colnames(results_matrix_so) <- c("D_ba", "timestep", "x_a_init", "x_a", "h_a", "e_star_a", "x_b_init", "x_b", "h_b","e_star_b", "NPV_a_star", "NPV_b_star")
+colnames(results_matrix_so) <- c("M_ba", "timestep", "x_a_init", "x_a", "h_a", "e_star_a", "x_b_init", "x_b", "h_b","e_star_b", "NPV_a_star", "NPV_b_star")
 
 row_counter <- 1
 
 # Initialize variables to store NPV for each x_a and x_b combination
-NPV_a_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid)) * num_D_ba_iterations
-NPV_b_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid)) * num_D_ba_iterations
-names(NPV_a_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations)
-names(NPV_b_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations)
+NPV_a_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid)) * num_M_ba_iterations
+NPV_b_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid)) * num_M_ba_iterations
+names(NPV_a_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations)
+names(NPV_b_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations)
 
-for(D_ba in seq(0, 1, by = 0.1)) {
+for(M_ba in seq(0, 1, by = 0.1)) {
       
         # Recalculate dependent variables
-        D_bb = 1 - D_ba
+        M_bb = 1 - M_ba
 
 # Grid search over x_a_grid and x_b_grid
 for(i in seq_along(x_a_grid)) {
@@ -169,7 +169,7 @@ for(i in seq_along(x_a_grid)) {
   NPV_b_star <- NPV_b_star + V_b_star
   
   # Save results including e_hat_a and e_hat_b
-  results_matrix_so[row_counter, ] <- c(D_ba, t, x_a_init, x_a, h_a_val, e_star_values$e_star_a, x_b_init, x_b, h_b_val, e_star_values$e_star_b, NPV_a_star, NPV_b_star)
+  results_matrix_so[row_counter, ] <- c(M_ba, t, x_a_init, x_a, h_a_val, e_star_values$e_star_a, x_b_init, x_b, h_b_val, e_star_values$e_star_b, NPV_a_star, NPV_b_star)
   row_counter <- row_counter + 1
     
   # Update the stock for next iteration
@@ -178,7 +178,7 @@ for(i in seq_along(x_a_grid)) {
 }
 
     # Store NPV for the current x_a and x_b combination
-    index <- (i - 1) * length(x_b_grid) * num_D_ba_iterations + (j - 1) * num_D_ba_iterations + round(D_ba * 10) + 1
+    index <- (i - 1) * length(x_b_grid) * num_M_ba_iterations + (j - 1) * num_M_ba_iterations + round(M_ba * 10) + 1
     NPV_a_star_total[index] <- NPV_a_star
     NPV_b_star_total[index] <- NPV_b_star
     
@@ -202,22 +202,22 @@ df_results_so = as.data.frame(results_matrix_so) %>% filter(timestep==100) %>% s
 num_combinations <- length(x_a_grid) * length(x_b_grid)
 num_time_steps <- timesteps + 1  # Include time 0
 
-# Calculate the number of iterations over D_ba
-num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
+# Calculate the number of iterations over M_ba
+num_M_ba_iterations <- length(seq(0, 1, by = 0.1))
 
 # Calculate the maximum number of rows needed
-max_rows <- num_combinations * num_time_steps * num_D_ba_iterations
+max_rows <- num_combinations * num_time_steps * num_M_ba_iterations
 
 # Initialize NPV variables and counter
 num_cols <- 12
 results_matrix_soa <- matrix(NA_real_, nrow = max_rows, ncol = num_cols)
-colnames(results_matrix_soa) <- c("D_ba", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "V_a_star", "V_b_star", "NPV_ea_star")
+colnames(results_matrix_soa) <- c("M_ba", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "V_a_star", "V_b_star", "NPV_ea_star")
 
 row_counter <- 1
 
 # Initialize NPV variables and counter
-NPV_ea_star_total <- numeric(length = num_combinations * num_D_ba_iterations)
-names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations)
+NPV_ea_star_total <- numeric(length = num_combinations * num_M_ba_iterations)
+names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations)
 
 
 # Grid search over x_a_grid and x_b_grid
@@ -228,13 +228,13 @@ for(i in seq_along(x_a_grid)) {
     x_a_init <- x_a_grid[i]
     x_b_init <- x_b_grid[j]
     
-    for(D_ba in seq(0, 1, by = 0.1)) {
+    for(M_ba in seq(0, 1, by = 0.1)) {
       # Recalculate dependent variables
-      D_bb = 1 - D_ba
+      M_bb = 1 - M_ba
  
       NPV_ea_star <- 0
       
-      # Recalculate df_inf for every new D_ba value
+      # Recalculate df_inf for every new M_ba value
       df_all = data.frame()  # Reset df_all
       V_next = matrix(0, size_x_a, size_x_b)
       V = matrix(0, size_x_a, size_x_b)
@@ -310,12 +310,12 @@ for(i in seq_along(x_a_grid)) {
         NPV_ea_star <- NPV_ea_star + V_a_star
         
         # Save results
-        results_matrix_soa[row_counter, ] <- c(D_ba, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, V_a_star, V_b_star, NPV_ea_star)
+        results_matrix_soa[row_counter, ] <- c(M_ba, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, V_a_star, V_b_star, NPV_ea_star)
         row_counter <- row_counter + 1
       }
       
       # Store NPV for the current x_a and x_b combination
-      index <- (i - 1) * length(x_b_grid) * num_D_ba_iterations + (j - 1) * num_D_ba_iterations + round(D_ba * 10) + 1
+      index <- (i - 1) * length(x_b_grid) * num_M_ba_iterations + (j - 1) * num_M_ba_iterations + round(M_ba * 10) + 1
       NPV_ea_star_total[index] <- NPV_ea_star
     }
   }
@@ -339,8 +339,8 @@ df_results_so_bind = df_results_so  %>% rename (x_a_so = x_a) %>% rename (x_b_so
 df_results_ea_bind = df_results_soa %>% rename (x_a_soa = x_a) %>% rename (x_b_soa = x_b) %>% rename(h_a_soa = h_a_val)
 
 # Merging e_a_star values from df_inf into results based on x_a and x_b
-results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ba", "x_a_init", "x_b_init")) %>% 
-  left_join(df_results_ea_bind, by= c("D_ba","x_a_init", "x_b_init")) %>% 
+results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("M_ba", "x_a_init", "x_b_init")) %>% 
+  left_join(df_results_ea_bind, by= c("M_ba","x_a_init", "x_b_init")) %>% 
   mutate(WTP_A = NPV_ea_star-NPV_a_hat,
          WTA_B = NPV_b_hat) %>% 
   mutate(accept = WTP_A-WTA_B)
@@ -349,7 +349,7 @@ results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ba", "
 
 ```{r}
 
-write.csv(results, here("data","outputs","low_low","theta_Dba_rev.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","low_low","theta_Mba_rev.csv"), row.names=FALSE)
 
 ```
 

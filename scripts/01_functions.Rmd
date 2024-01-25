@@ -1,5 +1,5 @@
 
-# II. General Functions
+# I. General Functions
 
 ```{r}
 
@@ -90,7 +90,7 @@ compute_e_star <- function(x_a, x_b, p_a, c_a, mu_a, M_aa, sigma_a, D_aa, k_a, r
   phi_b <- (b_b(p_b, c_b) / delta - b_b(p_b, c_b) * mu_b * M_bb - b_a(p_a, c_a) * mu_b * M_ba) / 
            (b_b(p_b, c_b) * sigma_b * D_bb + b_a(p_a, c_a) * sigma_a * D_ba)
   
-  e_star_a <- min(max((k_a * (r_a - phi_a)) / (2 * r_a), 0), x_a) #Escapement must be greater than zero and can't be greater than carrying capacity
+  e_star_a <- min(max((k_a * (r_a - phi_a)) / (2 * r_a), 0), x_a) # Escapement must be greater than zero and can't be greater than carrying capacity
   e_star_b <- min(max((k_b * (r_b - phi_b)) / (2 * r_b), 0), x_b)
   
   return(list(e_star_a = e_star_a, e_star_b = e_star_b))
@@ -125,6 +125,30 @@ payoff = function(e_a, x_a, x_b, V)
   V_next =  bilinear(x_a_grid, x_b_grid, V, x_a_new, x_b_new)
   negout = -(pi_a(x_a=x_a, e_a=e_a) + delta*V_next$z) 
   return(negout)
+}
+
+
+# Dynamic Programming Function from Interpolation
+
+compute_e_a_star <- function(x_a, x_b, df_inf) {
+  
+  #interp_model <- mgcv::gam(e_a_star ~ x_a + x_b, data = df_inf, method = "REML")
+  #df_int = df_inf %>% mutate(xab = x_a * x_b) 
+  
+  interp_model <- mgcv::gam(e_a_star ~ s(x_a) + s(x_b), data = df_inf)
+  
+  interp_frame <- data.frame(x_a = x_a, x_b = x_b)
+  #interp_frame <- data.frame(x_a = x_a, x_b = x_b)
+  
+  e_a_star <- pmax(min(df_inf$e_a_star), predict(interp_model, newdata = interp_frame)) # Keep as df_inf
+  
+  # Predict e_a_star using the linear model
+  #e_a_star_interpolated <- predict(interp_model, newdata = interp_frame)
+
+  # Ensure that the result is non-negative
+  #e_a_star <- pmax(e_a_star_interpolated, 0)
+  
+  return(e_a_star)
 }
 
 ```

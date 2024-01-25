@@ -327,6 +327,10 @@ for(i in seq_along(x_a_grid)) {
     NPV_eb_star <- 0
     
     for(t in 1:timesteps) {
+    
+  initial_e_a_star <- matrix_df[i, j]
+      
+  e_a_star <- ifelse(matrix_df[i, j] > x_a, x_a, matrix_df[i, j])
   
   # Calculate harvest based on e_star
   h_a_val = h_a(x_a, e_a_star)
@@ -396,8 +400,7 @@ results_nar <- results %>%
 
 ```{r}
 
-#write.csv(results, here("data","outputs","theta_test.csv"), row.names=FALSE)
-#write.csv(results, here("data","outputs","high_low","theta_Dab.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","high_high","theta_Dab.csv"), row.names=FALSE)
 
 ```
 
