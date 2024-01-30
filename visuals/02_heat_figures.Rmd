@@ -30,6 +30,8 @@ mvmt_pt8 = read.csv(here("data","outputs","mvmt_pt8.csv"))
 mvmt_pt9 = read.csv(here("data","outputs","mvmt_pt9.csv")) 
 mvmt_pt10 = read.csv(here("data","outputs","mvmt_pt10.csv"))
 
+mvmt_disp <- read.csv(here("data","outputs","mvmt_dispersal.csv"))
+
 ```
 
 # Part 0. Editing final data frame so that corner solutions are fixed.
@@ -131,7 +133,15 @@ breaks = seq(500, 2700, by = 200)
 
 # Agreement Acceptance
 
-for_stock_plot_sum2 = full_mvmt_df %>%
+for_stock_plot_sum2 = mvmt_disp %>% 
+  select(-WTP_A, -accept) %>% 
+  mutate(NPV_coop = (NPV_a_star + NPV_b_star)) %>%
+  mutate(x_coop = (x_a_so + x_b_so)) %>% 
+  mutate(x_soa = (x_a_soa + x_b_soa)) %>% 
+  mutate(NPV_coop = ifelse(x_b_so == e_star_b, NPV_ea_star, NPV_coop)) %>% 
+  mutate(x_coop = ifelse(x_b_so == e_star_b, x_soa, x_coop)) %>% 
+  mutate(WTP_A = NPV_ea_star - NPV_a_hat) %>% 
+  mutate(accept = WTP_A-WTA_B) %>% 
   mutate(diff = x_soa - x_coop) %>% 
   group_by(D_ab, D_ba) %>% 
   summarize(mean_accept = mean(accept))
@@ -139,37 +149,58 @@ for_stock_plot_sum2 = full_mvmt_df %>%
 diff <- ggplot() +
   theme_minimal() +
   geom_tile(data = for_stock_plot_sum2, aes(x = D_ab, y = D_ba, fill = mean_accept)) +
-  scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
+  #scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
   labs(x = "Larval Dispersal to Reserve Patch (A to B)", y = "Larval Dispersal to Fishing Patch (B to A)", fill = "") +
-  ggtitle("Mean Agreement Acceptance (WTP - WTA)") +
-  theme(legend.position="none")
+  ggtitle("Mean Agreement Acceptance (WTP - WTA)") #+
+  #theme(legend.position="none")
+diff
 
 # Willingness-to-Pay for Patch A
 
-for_stock_plot_sum2 = full_mvmt_df %>% 
+for_stock_plot_sum2 = mvmt_disp %>% 
+  select(-WTP_A, -accept) %>% 
+  mutate(NPV_coop = (NPV_a_star + NPV_b_star)) %>%
+  mutate(x_coop = (x_a_so + x_b_so)) %>% 
+  mutate(x_soa = (x_a_soa + x_b_soa)) %>% 
+  mutate(NPV_coop = ifelse(x_b_so == e_star_b, NPV_ea_star, NPV_coop)) %>% 
+  mutate(x_coop = ifelse(x_b_so == e_star_b, x_soa, x_coop)) %>% 
+  mutate(WTP_A = NPV_ea_star - NPV_a_hat) %>% 
+  mutate(accept = WTP_A-WTA_B) %>% 
+  mutate(diff = x_soa - x_coop) %>% 
   group_by(D_ab, D_ba) %>% 
   summarize(mean_WTP_A = mean(WTP_A))
 
 wtp <- ggplot() +
   theme_minimal() +
   geom_tile(data = for_stock_plot_sum2, aes(x = D_ab, y = D_ba, fill = mean_WTP_A)) +
-  scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
+  #scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
   labs(x = "Larval Dispersal to Reserve Patch (A to B)", y = "Larval Dispersal to Fishing Patch (B to A)", fill = "") +
-  ggtitle("Mean Willingness-to-Pay for Patch A") +
-  theme(legend.position="none")
+  ggtitle("Mean Willingness-to-Pay for Patch A") #+
+  #theme(legend.position="none")
+wtp
 
 # Willingness-to-Accept for Patch B
 
-for_stock_plot_sum2 = full_mvmt_df %>% 
+for_stock_plot_sum2 = mvmt_disp %>% 
+  select(-WTP_A, -accept) %>% 
+  mutate(NPV_coop = (NPV_a_star + NPV_b_star)) %>%
+  mutate(x_coop = (x_a_so + x_b_so)) %>% 
+  mutate(x_soa = (x_a_soa + x_b_soa)) %>% 
+  mutate(NPV_coop = ifelse(x_b_so == e_star_b, NPV_ea_star, NPV_coop)) %>% 
+  mutate(x_coop = ifelse(x_b_so == e_star_b, x_soa, x_coop)) %>% 
+  mutate(WTP_A = NPV_ea_star - NPV_a_hat) %>% 
+  mutate(accept = WTP_A-WTA_B) %>% 
+  mutate(diff = x_soa - x_coop) %>% 
   group_by(D_ab, D_ba) %>% 
   summarize(mean_WTA_B = mean(WTA_B))
 
 wta <- ggplot() +
   theme_minimal() +
   geom_tile(data = for_stock_plot_sum2, aes(x = D_ab, y = D_ba, fill = mean_WTA_B)) +
-  scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
+  #scale_fill_gradientn(colours = pal, limits = limits, breaks = breaks) +
   labs(x = "Larval Dispersal to Reserve Patch (A to B)", y = "Larval Dispersal to Fishing Patch (B to A)", fill = "") +
   ggtitle("Mean Willingness-to-Accept for Patch B")
+wta
 
 ```
 

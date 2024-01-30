@@ -1,0 +1,393 @@
+
+# Theta Model
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(knitr)
+library(stargazer)
+library(reshape2)
+library(cowplot)
+library(akima)
+```
+
+
+# Non-Cooperative Scenario
+
+```{r}
+
+# Initialize data frame for storing results
+
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(1, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
+num_cols <- 11  
+results_matrix_non <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
+colnames(results_matrix_non) <- c("D_ab", "D_ba", "timestep", "x_a_init", "x_a", "e_hat_a", "x_b_init", "x_b", "e_hat_b", "NPV_a_hat", "NPV_b_hat")
+
+row_counter <- 1
+
+# Initialize variables to store NPV for each x_a and x_b combination
+NPV_a_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
+NPV_b_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
+names(NPV_a_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
+names(NPV_b_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
+
+for(D_ab in seq(0, 1, by = 0.1)) {
+      for(D_ba in seq(0, 1, by = 0.1)) {
+      
+        # Recalculate dependent variables
+        D_aa = 1 - D_ab
+        D_bb = 1 - D_ba
+  
+# Grid search over x_a_grid and x_b_grid
+for(i in seq_along(x_a_grid)) {
+  for(j in seq_along(x_b_grid)) {
+    
+    # Initial stock values for this run
+    x_a <- x_a_grid[i]
+    x_b <- x_b_grid[j]
+    
+    # Storing initial values
+    x_a_init <- x_a_grid[i]
+    x_b_init <- x_b_grid[j]
+    
+    NPV_a_hat <- 0
+    NPV_b_hat <- 0
+    
+    for(t in 1:timesteps) {
+  
+  # Calculate e_hat_a and e_hat_b
+  e_hat_values <- compute_e_hat(x_a = x_a, x_b = x_b, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, mu_b, M_bb, sigma_b, D_bb, k_b, r_b, delta)
+  
+  # Calculate harvest based on e_hat
+  h_a_val = h_a(x_a, e_hat_values$e_hat_a)
+  h_b_val = h_b(x_b, e_hat_values$e_hat_b)
+  
+  # Escapement
+  e_hat_a = e_a(x_a, h_a_val)
+  e_hat_b = e_b(x_b, h_b_val)
+  
+  # Update stocks in each patch
+  x_a_new = next_x_a(e_hat_a, e_hat_b) - mu_a*M_aa*e_hat_a - mu_b*M_ba*e_hat_b + mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b
+  x_b_new = next_x_b(e_hat_a, e_hat_b) - mu_b*M_bb*e_hat_b - mu_a*M_ab*e_hat_a + mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a
+  
+  # Value
+  V_a_hat = b_a(p_a, c_a) * (x_a - e_hat_values$e_hat_a) * delta^(t-1)
+  V_b_hat = b_b(p_b, c_b) * (x_b - e_hat_values$e_hat_b) * delta^(t-1)
+      
+  # Update NPV
+  NPV_a_hat <- NPV_a_hat + V_a_hat
+  NPV_b_hat <- NPV_b_hat + V_b_hat
+  
+  # Save results including e_hat_a and e_hat_b
+  results_matrix_non[row_counter, ] <- c(D_ab, D_ba, t, x_a_init, x_a, e_hat_values$e_hat_a, x_b_init, x_b, e_hat_values$e_hat_b, NPV_a_hat, NPV_b_hat)
+  row_counter <- row_counter + 1
+    
+  # Update the stock for next iteration
+  x_a <- x_a_new
+  x_b <- x_b_new
+}
+
+    # Store NPV for the current x_a and x_b combination
+    index <- (i - 1) * length(x_b_grid) + j
+    NPV_a_hat_total[index] <- NPV_a_hat
+    NPV_b_hat_total[index] <- NPV_b_hat
+    
+  }
+}
+      }
+    }
+
+df_results_non = as.data.frame(results_matrix_non) %>% filter(timestep==100) %>% select(-timestep)
+
+```
+
+# Cooperative Scenario (Sole Owner Both Patches Scenario)
+
+```{r}
+
+# Initialize data frame for storing results
+
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(1, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
+num_cols <- 11  
+results_matrix_so <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
+colnames(results_matrix_so) <- c("D_ab", "D_ba", "timestep", "x_a_init", "x_a", "e_star_a", "x_b_init", "x_b", "e_star_b", "NPV_a_star", "NPV_b_star")
+
+row_counter <- 1
+
+# Initialize variables to store NPV for each x_a and x_b combination
+NPV_a_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
+NPV_b_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
+names(NPV_a_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
+names(NPV_b_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
+
+for(D_ab in seq(0, 1, by = 0.1)) {
+      for(D_ba in seq(0, 1, by = 0.1)) {
+      
+        # Recalculate dependent variables
+        D_aa = 1 - D_ab
+        D_bb = 1 - D_ba
+
+# Grid search over x_a_grid and x_b_grid
+for(i in seq_along(x_a_grid)) {
+  for(j in seq_along(x_b_grid)) {
+    
+    # Initial stock values for this run
+    x_a <- x_a_grid[i]
+    x_b <- x_b_grid[j]
+    
+    # Storing initial values
+    x_a_init <- x_a_grid[i]
+    x_b_init <- x_b_grid[j]
+    
+    NPV_a_star <- 0
+    NPV_b_star <- 0
+    
+    for(t in 1:timesteps) {
+  
+  # Calculate e_star_a and e_star_b
+  e_star_values <- compute_e_star(x_a = x_a, x_b = x_b, p_a, c_a, mu_a, M_aa, sigma_a, D_aa, k_a, r_a, p_b, c_b, mu_b, M_ab, M_ba, sigma_b, D_ab, D_ba, delta)
+  
+  # Calculate harvest based on e_star
+  h_a_val = h_a(x_a, e_star_values$e_star_a)
+  h_b_val = h_b(x_b, e_star_values$e_star_b)
+  
+  # Escapement
+  e_star_a = e_a(x_a, h_a_val)
+  e_star_b = e_b(x_b, h_b_val)
+  
+  # Update stocks in each patch
+  x_a_new = next_x_a(e_star_a, e_star_b) - mu_a*M_aa*e_star_a - mu_b*M_ba*e_star_b + mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b
+  x_b_new = next_x_b(e_star_a, e_star_b) - mu_b*M_bb*e_star_b - mu_a*M_ab*e_star_a + mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a
+  
+  # Value
+  V_a_star = b_a(p_a, c_a) * (x_a - e_star_values$e_star_a) * delta^(t-1)
+  V_b_star = b_b(p_b, c_b) * (x_b - e_star_values$e_star_b) * delta^(t-1)
+      
+  # Update NPV
+  NPV_a_star <- NPV_a_star + V_a_star
+  NPV_b_star <- NPV_b_star + V_b_star
+  
+  # Save results including e_hat_a and e_hat_b
+  results_matrix_so[row_counter, ] <- c(D_ab, D_ba, t, x_a_init, x_a, e_star_values$e_star_a, x_b_init, x_b, e_star_values$e_star_b, NPV_a_star, NPV_b_star)
+  row_counter <- row_counter + 1
+    
+  # Update the stock for next iteration
+  x_a <- x_a_new
+  x_b <- x_b_new
+}
+
+    # Store NPV for the current x_a and x_b combination
+    index <- (i - 1) * length(x_b_grid) + j
+    NPV_a_star_total[index] <- NPV_a_star
+    NPV_b_star_total[index] <- NPV_b_star
+    
+  }
+}
+      }
+    }
+
+df_results_so = as.data.frame(results_matrix_so) %>% filter(timestep==100) %>% select(-timestep)
+  
+
+```
+
+# I. Dynamic Programming to find Timestep = 1
+
+```{r}
+
+# Find Patch A Sole Owner Scenario (e_a*)
+
+df_all = data.frame()
+V_next = matrix(0, size_x_a, size_x_b)
+V = matrix(0, size_x_a, size_x_b)
+
+for(t in T:1) {
+  for(i in 1:size_x_a) {
+    x_a = x_a_grid[i]
+    for(j in 1:size_x_b) {
+      x_b = x_b_grid[j]
+      guess = x_a/2
+      low = 0 #lower bound on escapement in A
+      high = x_a #upper bound on escapement in A
+      Thing = optim(par=guess, fn=payoff, lower=low, upper=high, x_a=x_a, x_b=x_b, V=V, method='L-BFGS-B')
+      e_a_star = Thing$par
+      V_star = -Thing$value
+      V_next[i,j] = V_star
+      df_now = data.frame(time=t, x_a=x_a, x_b=x_b, e_a_star=e_a_star, V_star=V_star)
+      df_all = rbind(df_all, df_now)
+    }
+  }
+  V = V_next
+}
+
+df_inf = df_all %>% filter(time==1) %>% select(-time, -V_star) 
+
+```
+
+#II. Sole Owner Patch A (Reserve Scenario)
+
+# Single Value
+
+```{r}
+
+# Calculate the number of combinations and time steps
+num_combinations <- length(x_a_grid) * length(x_b_grid)
+num_time_steps <- timesteps + 1  # Include time 0
+
+# Calculate the number of iterations over D_ba and D_ab
+num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
+num_D_ab_iterations <- length(seq(0, 1, by = 0.1))
+
+# Calculate the maximum number of rows needed
+max_rows <- num_combinations * num_time_steps * num_D_ba_iterations * num_D_ab_iterations
+
+# Initialize NPV variables and counter
+num_cols <- 13
+results_matrix_soa <- matrix(NA_real_, nrow = max_rows, ncol = num_cols)
+colnames(results_matrix_soa) <- c("D_ba", "D_ab", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "V_a_star", "V_b_star", "NPV_ea_star")
+
+row_counter <- 1
+
+# Initialize NPV variables and counter
+NPV_ea_star_total <- numeric(length = num_combinations * num_D_ba_iterations * num_D_ab_iterations)
+names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations, "_D_ab", 1:num_D_ab_iterations)
+
+# Grid search over x_a_grid and x_b_grid
+for(i in seq_along(x_a_grid)) {
+  for(j in seq_along(x_b_grid)) {
+    
+    # Storing initial values
+    x_a_init <- x_a_grid[i]
+    x_b_init <- x_b_grid[j]
+    
+    for(D_ba in seq(0, 1, by = 0.1)) {
+      for(D_ab in seq(0, 1, by = 0.1)) {
+        # Recalculate dependent variables
+        D_bb = 1 - D_ba
+        D_aa = 1 - D_ab
+ 
+        NPV_ea_star <- 0
+    
+    # Recalculate df_inf for every new D_ba value
+      df_all = data.frame()  # Reset df_all
+      V_next = matrix(0, size_x_a, size_x_b)
+      V = matrix(0, size_x_a, size_x_b)
+      
+      for(t in T:1) {
+        for(k in 1:size_x_a) {
+          x_a = x_a_grid[k]
+          for(l in 1:size_x_b) {
+            x_b = x_b_grid[l]
+            guess = x_a/2
+            low = 0 #lower bound on escapement in A
+            high = x_a #upper bound on escapement in A
+            Thing = optim(par=guess, fn=payoff, lower=low, upper=high, x_a=x_a, x_b=x_b, V=V, method='L-BFGS-B')
+            e_a_star = max(Thing$par, 0.1)
+            V_star = -Thing$value
+            V_next[k,l] = V_star
+            df_now = data.frame(time=t, x_a=x_a, x_b=x_b, e_a_star=e_a_star, V_star=V_star)
+            df_all = rbind(df_all, df_now)
+          }
+        }
+        V = V_next
+      }
+      
+      # Filter and select results for timestep 1 (you can adjust the timestep as needed)
+      df_inf <- df_all %>% filter(time == 1) %>% select(-time, -V_star)
+      
+      matrix_df = dcast(df_inf, x_a ~ x_b, value.var = "e_a_star")
+      rownames(matrix_df) = x_a_grid
+      matrix_df = matrix_df[, -1]
+      
+      # Initial stock values for this run
+      x_a <- x_a_init
+      x_b <- x_b_init
+      
+      # Extract initial escapement (e_a_star) from df_inf
+      e_a_star <- matrix_df[i, j]
+      
+      for(t in 0:timesteps) {
+        
+        if (t == 0) {
+          # At timestep 0, use initial values and e_a_star from matrix_df
+          
+          x_a <- x_a_init
+          x_b <- x_b_init
+          e_a_star <- matrix_df[i, j]
+          
+        } else {
+          
+          # At timesteps 1-100, update x_a and x_b based on previous values
+          x_a_new <- min((mu_a*M_aa*e_a_star + mu_b*M_ba*x_b + sigma_a*(D_aa*growth_a(e_a_star) + D_ba*growth_b(x_b))), k_a)
+          x_b_new <- min((mu_b*M_bb*x_b + mu_a*M_ab*e_a_star + sigma_b*(D_bb*growth_b(x_b) + D_ab*growth_a(e_a_star))), k_b)
+          
+          # Interpolate e_a_star using compute_e_a_star
+          e_a_star <- compute_e_a_star(x_a = x_a_new, x_b = x_a_new, df_inf)
+          
+          # Ensure e_a_star doesn't exceed x_a
+          e_a_star <- ifelse(e_a_star > x_a_new, x_a_new, e_a_star)
+          
+          # Update x_a and x_b
+          x_a <- x_a_new
+          x_b <- x_b_new
+        }
+        
+        # Calculate harvest based on e_star
+        h_a_val = h_a(x_a, e_a_star)
+        h_b_val = h_b(x_b, x_b)
+        
+        # Value
+        V_a_star = b_a(p_a, c_a) * (x_a - e_a_star) * delta^t
+        V_b_star = b_b(p_b, c_b) * (x_b) * delta^t
+        
+        # Update NPV
+        NPV_ea_star <- NPV_ea_star + V_a_star
+        
+        # Save results
+        results_matrix_soa[row_counter, ] <- c(D_ba, D_ab, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, V_a_star, V_b_star, NPV_ea_star)
+        row_counter <- row_counter + 1
+      }
+    
+    # Store NPV for the current x_a and x_b combination
+        index <- (i - 1) * length(x_b_grid) * num_D_ba_iterations * num_D_ab_iterations + 
+                 (j - 1) * num_D_ba_iterations * num_D_ab_iterations + 
+                 round(D_ba * 10) + 1 + 
+                 round(D_ab * 10) * num_D_ba_iterations + 1
+        NPV_ea_star_total[index] <- NPV_ea_star
+      }
+    }
+  }
+}
+
+# Filter and select results for timestep 100
+df_results_soa <- as.data.frame(results_matrix_soa) %>% filter(timestep == 100) %>% select(-timestep)
+
+```
+
+# Calculate Final Results
+
+```{r}
+
+# Changing the name of x_a_init and x_b_init to just x_a and x_b for simplicity. 
+df_results_non_bind = df_results_non %>% rename (x_a_non = x_a) %>% rename (x_b_non = x_b)
+df_results_so_bind = df_results_so %>% rename (x_a_so = x_a) %>% rename (x_b_so = x_b)
+df_results_ea_bind = df_results_soa %>% rename (x_a_soa = x_a) %>% rename (x_b_soa = x_b)
+
+# Merging e_a_star values from df_inf into results based on x_a and x_b
+results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ab", "D_ba", "x_a_init", "x_b_init")) %>% 
+  left_join(df_results_ea_bind, by= c("D_ab", "D_ba","x_a_init", "x_b_init")) %>% 
+  mutate(WTP_A = NPV_ea_star-NPV_a_hat,
+         WTA_B = NPV_b_hat) %>% 
+  mutate(accept = WTP_A-WTA_B)
+
+
+```
+
+```{r}
+
+write.csv(results, here("data","outputs","mvmt_dispersal.csv"), row.names=FALSE)
+
+```
+

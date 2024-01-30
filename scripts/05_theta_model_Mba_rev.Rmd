@@ -68,8 +68,8 @@ for(M_ba in seq(0, 1, by = 0.1)) {
                 e_hat_b = e_b(x_b, h_b_val)
   
                 # Update stocks in each patch
-                x_a_new = next_x_a(e_hat_a, e_hat_b) - mu_a*M_aa*e_hat_a - mu_b*M_ba*e_hat_b + mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b
-                x_b_new = next_x_b(e_hat_a, e_hat_b) - mu_b*M_bb*e_hat_b - mu_a*M_ab*e_hat_a + mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a
+                x_a_new = min(mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b + sigma_a*(D_aa*growth_a(e_hat_a) + D_ba*growth_b(e_hat_b)), k_a)
+                x_b_new = min(mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a + sigma_b*(D_bb*growth_b(e_hat_b) + D_ab*growth_a(e_hat_a)), k_b)
   
                 # Value
                 V_a_hat = b_a(p_a, c_a) * (x_a - e_hat_values$e_hat_a) * delta^(t-1)
@@ -157,8 +157,8 @@ for(i in seq_along(x_a_grid)) {
   e_star_b = e_b(x_b, h_b_val)
   
   # Update stocks in each patch
-  x_a_new = next_x_a(e_star_a, e_star_b) - mu_a*M_aa*e_star_a - mu_b*M_ba*e_star_b + mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b
-  x_b_new = next_x_b(e_star_a, e_star_b) - mu_b*M_bb*e_star_b - mu_a*M_ab*e_star_a + mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a
+  x_a_new = min(mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b + sigma_a*(D_aa*growth_a(e_star_a) + D_ba*growth_b(e_star_b)), k_a)
+  x_b_new = min(mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a + sigma_b*(D_bb*growth_b(e_star_b) + D_ab*growth_a(e_star_a)), k_b)
   
   # Value
   V_a_star = b_a(p_a, c_a) * (x_a - e_star_values$e_star_a) * delta^(t-1)
@@ -209,9 +209,9 @@ num_M_ba_iterations <- length(seq(0, 1, by = 0.1))
 max_rows <- num_combinations * num_time_steps * num_M_ba_iterations
 
 # Initialize NPV variables and counter
-num_cols <- 12
+num_cols <- 10
 results_matrix_soa <- matrix(NA_real_, nrow = max_rows, ncol = num_cols)
-colnames(results_matrix_soa) <- c("M_ba", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "V_a_star", "V_b_star", "NPV_ea_star")
+colnames(results_matrix_soa) <- c("M_ba", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "NPV_ea_star")
 
 row_counter <- 1
 
@@ -288,7 +288,7 @@ for(i in seq_along(x_a_grid)) {
           x_b_new <- min((mu_b*M_bb*x_b + mu_a*M_ab*e_a_star + sigma_b*(D_bb*growth_b(x_b) + D_ab*growth_a(e_a_star))), k_b)
           
           # Interpolate e_a_star using compute_e_a_star
-          e_a_star <- compute_e_a_star(x_a = x_a_new, x_b = x_a_new, df_inf)
+          e_a_star <- compute_e_a_star(x_a = x_a_new, x_b = x_b_new, df_inf)
           
           # Ensure e_a_star doesn't exceed x_a
           e_a_star <- ifelse(e_a_star > x_a_new, x_a_new, e_a_star)
@@ -310,7 +310,7 @@ for(i in seq_along(x_a_grid)) {
         NPV_ea_star <- NPV_ea_star + V_a_star
         
         # Save results
-        results_matrix_soa[row_counter, ] <- c(M_ba, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, V_a_star, V_b_star, NPV_ea_star)
+        results_matrix_soa[row_counter, ] <- c(M_ba, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, NPV_ea_star)
         row_counter <- row_counter + 1
       }
       

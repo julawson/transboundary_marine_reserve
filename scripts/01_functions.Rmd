@@ -127,7 +127,6 @@ payoff = function(e_a, x_a, x_b, V)
   return(negout)
 }
 
-
 # Dynamic Programming Function from Interpolation
 
 compute_e_a_star <- function(x_a, x_b, df_inf) {
