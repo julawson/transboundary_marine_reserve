@@ -33,7 +33,7 @@ df = bind_rows(M_ab_sens, M_ba_sens, D_ab_sens, D_ba_sens) %>%
 #high_high_df = df %>% add_column(scenario = "high_high")
 #low_high_df = df %>% add_column(scenario = "low_high")
 #high_low_df = df %>% add_column(scenario = "high_low")
-#low_low_df = df %>% add_column(scenario = "low_low")
+low_low_df = df %>% add_column(scenario = "low_low")
 
 mvmt_sens = bind_rows(high_high_df, low_high_df, high_low_df, low_low_df)
 
@@ -107,10 +107,10 @@ ggsave(here("visuals","output","bar_plot_original_rev.jpg"), bar_plot_original, 
 # Create a vector with the desired label order
 label_order <- c("M_ab", "M_ba", "D_ab", "D_ba")
 # Convert the 'theta' variable to a factor with the desired label order
-high_high_df$theta <- factor(high_high_df$theta, levels = label_order)
+low_low_df$theta <- factor(low_low_df$theta, levels = label_order)
 pal <- c("#3B9AB2", "#78B7C5", "#EBCC2A", "#E1AF00") #, "#EF5703", "#F21A00", "#A5C2A3", "#BDC881")
 
-geom_ribbon = high_high_df %>% 
+geom_ribbon = low_low_df %>% 
   mutate(coop_mgmt = NPV_coop - (NPV_a_hat + NPV_b_hat)) %>% 
   mutate(add_value = accept + NPV_coop) %>% 
   group_by(theta, value) %>% 
@@ -120,9 +120,9 @@ geom_ribbon = high_high_df %>%
             coop_mgmt = mean(accept) + mean(reserve_npv_coop))
 
 geom_start = geom_ribbon %>% 
-  filter(theta == "M_ba" & value == 0.8 | theta == "M_ab" & value == 0.8 | theta == "D_ba" & value == 0.8 |theta == "D_ab" & value == 0.8)
+  filter(theta == "M_ba" & value == 0.2 | theta == "M_ab" & value == 0.2 | theta == "D_ba" & value == 0.2 |theta == "D_ab" & value == 0.2)
 
-high_high <- ggplot(geom_ribbon, aes(x = value, y = mean_accept, color = theta)) +
+low_low <- ggplot(geom_ribbon, aes(x = value, y = mean_accept, color = theta)) +
   theme_minimal() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_line(size=1.5) +
@@ -133,13 +133,13 @@ high_high <- ggplot(geom_ribbon, aes(x = value, y = mean_accept, color = theta))
   scale_color_manual(
     name = "Theta",
     labels = c("Movement (A to B)", "Movement (B to A)", "Dispersal (A to B)", "Dispersal (B to A)"),
-    values = setNames(pal, unique(high_high_df$theta))
+    values = setNames(pal, unique(low_low_df$theta))
   ) +
-  facet_wrap(~theta, scales = "free", ncol = 1) +
-  ggtitle("High Movement, High Dispersal") +
+  facet_wrap(~theta, scales = "free", ncol = 2) +
+  ggtitle("Low Movement, Low Dispersal") +
   theme(strip.text.x = element_blank()) #+
   #theme(legend.position="none")
-high_high
+low_low
 
 ```
 

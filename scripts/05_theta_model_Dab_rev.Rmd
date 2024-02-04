@@ -349,7 +349,7 @@ results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ab", "
 
 ```{r}
 
-write.csv(results, here("data","outputs","low_low","theta_Dab_rev.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","low_high","theta_Dab_rev.csv"), row.names=FALSE)
 
 ```
 

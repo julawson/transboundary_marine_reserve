@@ -139,6 +139,7 @@ compute_e_a_star <- function(x_a, x_b, df_inf) {
   interp_frame <- data.frame(x_a = x_a, x_b = x_b)
   #interp_frame <- data.frame(x_a = x_a, x_b = x_b)
   
+  # predicted e_a_star is equal to or greater the e_a_star in df_inf
   e_a_star <- pmax(min(df_inf$e_a_star), predict(interp_model, newdata = interp_frame)) # Keep as df_inf
   
   # Predict e_a_star using the linear model
