@@ -17,10 +17,10 @@ library(patchwork)
 
 ```{r}
 
-M_ab_sens = read.csv(here("data","outputs","low_low","theta_Mab_rev.csv")) %>% add_column(theta = "M_ab") %>% rename(value = M_ab)
-M_ba_sens = read.csv(here("data","outputs","low_low","theta_Mba_rev.csv")) %>% add_column(theta = "M_ba") %>% rename(value = M_ba)
-D_ab_sens = read.csv(here("data","outputs","low_low","theta_Dab_rev.csv")) %>% add_column(theta = "D_ab") %>% rename(value = D_ab)
-D_ba_sens = read.csv(here("data","outputs","low_low","theta_Dba_rev.csv")) %>% add_column(theta = "D_ba") %>% rename(value = D_ba)
+M_ab_sens = read.csv(here("data","outputs","high_high","theta_Mab_rev2.csv")) %>% add_column(theta = "M_ab") %>% rename(value = M_ab)
+M_ba_sens = read.csv(here("data","outputs","high_high","theta_Mba_rev2.csv")) %>% add_column(theta = "M_ba") %>% rename(value = M_ba)
+D_ab_sens = read.csv(here("data","outputs","high_high","theta_Dab_rev2.csv")) %>% add_column(theta = "D_ab") %>% rename(value = D_ab)
+D_ba_sens = read.csv(here("data","outputs","high_high","theta_Dba_rev2.csv")) %>% add_column(theta = "D_ba") %>% rename(value = D_ba)
 
 df = bind_rows(M_ab_sens, M_ba_sens, D_ab_sens, D_ba_sens) %>% 
   mutate(NPV_coop = (NPV_a_star + NPV_b_star)) %>%
@@ -30,10 +30,10 @@ df = bind_rows(M_ab_sens, M_ba_sens, D_ab_sens, D_ba_sens) %>%
   mutate(x_soa = (x_a_soa + x_b_soa)) %>% 
   mutate(x_coop = ifelse(x_b_so == e_star_b, x_soa, x_coop))
 
-#high_high_df = df %>% add_column(scenario = "high_high")
+high_high_df = df %>% add_column(scenario = "high_high")
 #low_high_df = df %>% add_column(scenario = "low_high")
 #high_low_df = df %>% add_column(scenario = "high_low")
-low_low_df = df %>% add_column(scenario = "low_low")
+#low_low_df = df %>% add_column(scenario = "low_low")
 
 mvmt_sens = bind_rows(high_high_df, low_high_df, high_low_df, low_low_df)
 
@@ -47,10 +47,10 @@ mvmt_sens = bind_rows(high_high_df, low_high_df, high_low_df, low_low_df)
 ```{r}
 
 # Import Original Values
-low_low_orig <- low_low_df %>% filter(theta == "D_ab" & theta == "D_ba" & theta == "M_ba" & theta == "M_ab" | value==0.2)
-low_high_orig <- low_high_df %>% filter(theta == "D_ab" & theta == "D_ba" | value==0.8 & theta == "M_ab" & theta == "M_ba" | value==0.2) 
-high_low_orig <- high_low_df %>% filter(theta == "D_ab" & theta == "D_ba" | value==0.2 & theta == "M_ab" & theta == "M_ba" | value==0.8) 
-high_high_orig <- high_high_df %>% filter(theta == "D_ab" & theta == "D_ba" & theta == "M_ab" & theta == "M_ba" | value==0.8)
+low_low_orig <- low_low_df %>% filter(theta == "D_ab" & theta == "D_ba" & theta == "M_ba" & theta == "M_ab" | value==0.2) %>% select(-V_a_star, -V_b_star, -theta) %>% distinct()
+low_high_orig <- low_high_df %>% filter(theta == "D_ab" & theta == "D_ba" | value==0.8 & theta == "M_ab" & theta == "M_ba" | value==0.2) %>% select(-theta) %>% distinct()
+high_low_orig <- high_low_df %>% filter(theta == "D_ab" & theta == "D_ba" | value==0.2 & theta == "M_ab" & theta == "M_ba" | value==0.8) %>% select(-theta) %>% distinct()
+high_high_orig <- high_high_df %>% filter(theta == "D_ab" & theta == "D_ba" & theta == "M_ab" & theta == "M_ba" | value==0.8) %>% select(-theta) %>% distinct()
 
 original_vals <- bind_rows(low_low_orig, low_high_orig, high_low_orig, high_high_orig) %>% 
   mutate(NPV_coop = (NPV_a_star + NPV_b_star)) %>%
@@ -94,7 +94,7 @@ bar_plot_original
 
 ```{r}
 
-ggsave(here("visuals","output","bar_plot_original_rev.jpg"), bar_plot_original, width = 8, height = 6)
+ggsave(here("visuals","output","bar_plot_original_rev2.jpg"), bar_plot_original, width = 8, height = 6)
 
 ```
 
@@ -107,10 +107,10 @@ ggsave(here("visuals","output","bar_plot_original_rev.jpg"), bar_plot_original, 
 # Create a vector with the desired label order
 label_order <- c("M_ab", "M_ba", "D_ab", "D_ba")
 # Convert the 'theta' variable to a factor with the desired label order
-low_low_df$theta <- factor(low_low_df$theta, levels = label_order)
+high_high_df$theta <- factor(high_high_df$theta, levels = label_order)
 pal <- c("#3B9AB2", "#78B7C5", "#EBCC2A", "#E1AF00") #, "#EF5703", "#F21A00", "#A5C2A3", "#BDC881")
 
-geom_ribbon = low_low_df %>% 
+geom_ribbon = high_high_df %>% 
   mutate(coop_mgmt = NPV_coop - (NPV_a_hat + NPV_b_hat)) %>% 
   mutate(add_value = accept + NPV_coop) %>% 
   group_by(theta, value) %>% 
@@ -120,26 +120,26 @@ geom_ribbon = low_low_df %>%
             coop_mgmt = mean(accept) + mean(reserve_npv_coop))
 
 geom_start = geom_ribbon %>% 
-  filter(theta == "M_ba" & value == 0.2 | theta == "M_ab" & value == 0.2 | theta == "D_ba" & value == 0.2 |theta == "D_ab" & value == 0.2)
+  filter(theta == "M_ba" & value == 0.8 | theta == "M_ab" & value == 0.8 | theta == "D_ba" & value == 0.8 |theta == "D_ab" & value == 0.8)
 
-low_low <- ggplot(geom_ribbon, aes(x = value, y = mean_accept, color = theta)) +
+high_high <- ggplot(geom_ribbon, aes(x = value, y = mean_accept, color = theta)) +
   theme_minimal() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_line(size=1.5) +
   geom_line(aes(x = value, y = coop_mgmt), linetype = "dotted", color = "black") + # Dotted line represents the 'value' of an agreement (reserve NPV relative to cooperative solution NPV)
   geom_ribbon(aes(ymin = min_accept, ymax = max_accept), alpha = 0.1, color="lightgrey") +
   geom_point(data = geom_start, aes(x = value, y = mean_accept), shape = 19, size = 2, color = "black") +
-  labs(x = "Theta Value", y = "Agreement Value") +
+  labs(x = "Stock Mobility Parameter", y = "Agreement Value (WTP-WTA)") +
   scale_color_manual(
-    name = "Theta",
-    labels = c("Movement (A to B)", "Movement (B to A)", "Dispersal (A to B)", "Dispersal (B to A)"),
-    values = setNames(pal, unique(low_low_df$theta))
+    name = "Stock Mobility",
+    labels = c("Movement to Reserve Patch (A to B)", "Movement to Fishing Patch (B to A)", "Dispersal to Reserve Patch (A to B)", "Dispersal to Fishing Patch (B to A)"),
+    values = setNames(pal, unique(high_high_df$theta))
   ) +
-  facet_wrap(~theta, scales = "free", ncol = 2) +
-  ggtitle("Low Movement, Low Dispersal") +
+  facet_wrap(~theta, scales = "free", ncol = 1) +
+  ggtitle("High Movement, High Dispersal") +
   theme(strip.text.x = element_blank()) #+
   #theme(legend.position="none")
-low_low
+high_high
 
 ```
 
@@ -149,7 +149,7 @@ combined_plot <- low_low + low_high + high_low + high_high +
   plot_layout(ncol = 4)
 combined_plot
 
-ggsave(here("visuals","output","params_summary_ordered_rev.jpg"), combined_plot, width = 15, height = 9)
+ggsave(here("visuals","output","params_summary_ordered_rev2.jpg"), combined_plot, width = 15, height = 9)
 
 ```
 
@@ -160,61 +160,41 @@ ggsave(here("visuals","output","params_summary_ordered_rev.jpg"), combined_plot,
 ```{r}
 
 theta_stacked3 <- mvmt_sens %>% 
-  mutate(NPV_non = NPV_a_hat + NPV_b_hat) %>% 
+  mutate(NPV_non = NPV_a_hat + NPV_b_hat) %>%
   select(theta, value, scenario, NPV_non, NPV_coop, NPV_ea_star) %>% 
   mutate(NPV_res_to_coop = ((NPV_ea_star - NPV_coop)/NPV_coop)*100) %>% 
   select(theta, value, scenario, NPV_res_to_coop) %>% 
   pivot_longer(cols = c(NPV_res_to_coop), names_to = "Category", values_to = "Value_X") %>% 
   group_by(theta, value, scenario, Category) %>% 
-  summarize(mean_Value_X = mean(Value_X)) %>% 
-  filter(scenario != "low_low" | theta!="M_ab" | value!=0.9) %>% 
-  filter(scenario != "low_low" | theta!="M_ab" | value!=1)
-
-theta_stacked_ll <- mvmt_sens %>% 
-  mutate(NPV_non = NPV_a_hat + NPV_b_hat) %>% 
-  select(theta, value, scenario, NPV_non, NPV_coop, NPV_ea_star) %>% 
-  mutate(NPV_res_to_coop = ((NPV_ea_star - NPV_coop)/NPV_coop)*100) %>% 
-  select(theta, value, scenario, NPV_res_to_coop) %>% 
-  pivot_longer(cols = c(NPV_res_to_coop), names_to = "Category", values_to = "Value_X") %>% 
-  group_by(theta, value, scenario, Category) %>% 
-  summarize(mean_Value_X = mean(Value_X)) %>% 
-  filter(scenario == "low_low") %>% filter(theta=="M_ab") %>% filter(value>=0.9)
+  summarize(mean_Value_X = mean(Value_X))
 
 pal2 <- c("#7b3294", "#c2a5cf", "#fdb863", "#e66101")
 
-low_low_check <- low_low_df %>% filter(theta == "M_ab") %>% group_by(theta, value) %>% summarize(mean_accept = mean(accept)) 
-
 diff_npv <- ggplot() +
-  geom_line(data = theta_stacked_ll, aes(x = value, y = mean_Value_X, color = scenario, 
-                                       linetype = case_when(
-                                         scenario == "low_low" & theta == "M_ab" & value >= 0.9 ~ "1",
-                                         TRUE ~ "2")), size=1.5) +
   geom_line(data = theta_stacked3, aes(x = value, y = mean_Value_X, color = scenario, 
                                        linetype = case_when(
-                                         scenario == "high_high" & theta == "M_ba" & value <= 0.1  ~ "1",
                                          scenario == "high_low" & theta == "M_ba" & value <= 0.2  ~ "1",
                                          scenario == "low_high" & theta == "M_ba" & value <= 0.1  ~ "1",
                                          scenario == "low_low" & theta == "M_ba" & value <= 0.2  ~ "1",
                                          scenario == "low_low" & theta == "M_ab" & value <= 0.3  ~ "1",
-                                         scenario == "low_low" & theta == "D_ab" & value <= 0.4  ~ "1",
+                                         scenario == "low_low" & theta == "D_ab" & value <= 0.5  ~ "1",
                                          scenario == "low_low" & theta == "D_ba" & value <= 0.3  ~ "1",
-                                         TRUE ~ "2")), size=1.5) +
+                                         TRUE ~ "2")), size=1) +
   geom_line(data = theta_stacked3, aes(x = value, y = mean_Value_X, color = scenario, 
                                        linetype = case_when(
-                                         scenario == "high_high" & theta == "M_ba" & value >= 0.1  ~ "2",
                                          scenario == "high_low" & theta == "M_ba" & value >= 0.2  ~ "2",
                                          scenario == "low_high" & theta == "M_ba" & value >= 0.1  ~ "2",
                                          scenario == "low_low" & theta == "M_ba" & value >= 0.2  ~ "2",
-                                         scenario == "low_low" & theta == "M_ab" & value >= 0.3  ~ "2" ,
-                                         scenario == "low_low" & theta == "D_ab" & value >= 0.4  ~ "2",
+                                         scenario == "low_low" & theta == "M_ab" & value >= 0.3  ~ "2",
+                                         scenario == "low_low" & theta == "D_ab" & value >= 0.5  ~ "2",
                                          scenario == "low_low" & theta == "D_ba" & value >= 0.3  ~ "2",
-                                         TRUE ~ "1")), size=1.5) +
+                                         TRUE ~ "1")), size=1) +
   scale_color_manual(
     name = "Stock Mobility",
     labels = c("High Movement, High Dispersal", "High Movement, Low Dispersal", "Low Movement, High Dispersal", "Low Movement, Low Dispersal"),
     values = c("high_high" = "#e66101", "high_low" = "#fdb863", "low_high" = "#c2a5cf", "low_low" = "#7b3294")
   ) +
-  labs(x = "Theta Value", y = "Change in Net Present Value (%)") +
+  labs(x = "Stock Mobility Parameter", y = "Change in Net Present Value (%)") +
   theme_minimal() +
   geom_hline(yintercept=0, linetype="dashed") +
   facet_wrap(~theta, scales = "free", ncol = 2, labeller = labeller(theta = c(
@@ -222,7 +202,7 @@ diff_npv <- ggplot() +
   "D_ba" = "Dispersal to Fishing Patch (B to A)",
   "M_ab" = "Movement to Reserve Patch (A to B)",
   "M_ba" = "Movement to Fishing Patch (B to A)"))) +
-  ggtitle("Change from Cooperative NPV to Reserve NPV") +
+  #ggtitle("Change from Cooperative NPV to Reserve NPV") +
   theme(strip.text = element_text(size = 8)) +
   scale_linetype_manual(
     name = "Line Type",
@@ -250,57 +230,37 @@ theta_stacked3 <- mvmt_sens %>%
   select(theta, value, scenario, stock_res_to_coop) %>% 
   pivot_longer(cols = c(stock_res_to_coop), names_to = "Category", values_to = "Value_X") %>% 
   group_by(theta, value, scenario, Category) %>% 
-  summarize(mean_Value_X = mean(Value_X)) %>% 
-  filter(scenario != "low_low" | theta!="M_ab" | value!=0.9) %>% 
-  filter(scenario != "low_low" | theta!="M_ab" | value!=1)
-
-theta_stacked_ll <- mvmt_sens %>% 
-  mutate(x_ab_so = x_coop) %>% 
-  mutate(x_ab_non = x_a_non + x_b_non) %>% 
-  mutate(x_ab_res = x_soa) %>%
-  select(theta, value, scenario, x_ab_so, x_ab_non, x_ab_res) %>% 
-  mutate(stock_res_to_coop = ((x_ab_res - x_ab_so)/x_ab_so)*100) %>% 
-  select(theta, value, scenario, stock_res_to_coop) %>% 
-  pivot_longer(cols = c(stock_res_to_coop), names_to = "Category", values_to = "Value_X") %>% 
-  group_by(theta, value, scenario, Category) %>% 
-  summarize(mean_Value_X = mean(Value_X)) %>% 
-  filter(scenario == "low_low") %>% filter(theta=="M_ab") %>% filter(value>=0.9)
+  summarize(mean_Value_X = mean(Value_X))
 
 
 pal2 <- c("#7b3294", "#c2a5cf", "#fdb863", "#e66101")
 pal3 <- c("#A5C2A3", "#BDC881", "#f4a582", "#EF5703")
 
 diff_stock <- ggplot() +
-  geom_line(data = theta_stacked_ll, aes(x = value, y = mean_Value_X, color = scenario, 
-                                       linetype = case_when(
-                                         scenario == "low_low" & theta == "M_ab" & value >= 0.9 ~ "1",
-                                         TRUE ~ "2")), size=1.5) +
   geom_line(data = theta_stacked3, aes(x = value, y = mean_Value_X, color = scenario, 
                                        linetype = case_when(
-                                         scenario == "high_high" & theta == "M_ba" & value <= 0.1  ~ "1",
-                                         scenario == "high_low" & theta == "M_ba" & value <= 0.2  ~ "1",
-                                         scenario == "low_high" & theta == "M_ba" & value <= 0.1  ~ "1",
-                                         scenario == "low_low" & theta == "M_ba" & value <= 0.2  ~ "1",
-                                         scenario == "low_low" & theta == "M_ab" & value <= 0.3  ~ "1",
-                                         scenario == "low_low" & theta == "D_ab" & value <= 0.4  ~ "1",
-                                         scenario == "low_low" & theta == "D_ba" & value <= 0.3  ~ "1",
-                                         TRUE ~ "2")), size=1.5) +
+                                         scenario == "high_low" & theta == "M_ba" & value <= 0.2  ~ "2",
+                                         scenario == "low_high" & theta == "M_ba" & value <= 0.1  ~ "2",
+                                         scenario == "low_low" & theta == "M_ba" & value <= 0.2  ~ "2",
+                                         scenario == "low_low" & theta == "M_ab" & value <= 0.3  ~ "2",
+                                         scenario == "low_low" & theta == "D_ab" & value <= 0.5  ~ "2",
+                                         scenario == "low_low" & theta == "D_ba" & value <= 0.3  ~ "2",
+                                         TRUE ~ "1")), size=1) +
   geom_line(data = theta_stacked3, aes(x = value, y = mean_Value_X, color = scenario, 
                                        linetype = case_when(
-                                         scenario == "high_high" & theta == "M_ba" & value >= 0.1  ~ "2",
-                                         scenario == "high_low" & theta == "M_ba" & value >= 0.2  ~ "2",
-                                         scenario == "low_high" & theta == "M_ba" & value >= 0.1  ~ "2",
-                                         scenario == "low_low" & theta == "M_ba" & value >= 0.2  ~ "2",
-                                         scenario == "low_low" & theta == "M_ab" & value >= 0.3  ~ "2",
-                                         scenario == "low_low" & theta == "D_ab" & value >= 0.4  ~ "2",
-                                         scenario == "low_low" & theta == "D_ba" & value >= 0.3  ~ "2",
-                                         TRUE ~ "1")), size=1.5) +
+                                         scenario == "high_low" & theta == "M_ba" & value >= 0.2  ~ "1",
+                                         scenario == "low_high" & theta == "M_ba" & value >= 0.1  ~ "1",
+                                         scenario == "low_low" & theta == "M_ba" & value >= 0.2  ~ "1",
+                                         scenario == "low_low" & theta == "M_ab" & value >= 0.3  ~ "1",
+                                         scenario == "low_low" & theta == "D_ab" & value >= 0.5  ~ "1",
+                                         scenario == "low_low" & theta == "D_ba" & value >= 0.3  ~ "1",
+                                         TRUE ~ "2")), size=1) +
   scale_color_manual(
     name = "Stock Mobility",
     labels = c("High Movement, High Dispersal", "High Movement, Low Dispersal", "Low Movement, High Dispersal", "Low Movement, Low Dispersal"),
     values = c("high_high" = "#EF5703", "high_low" = "#f4a582", "low_high" = "#BDC881", "low_low" = "#A5C2A3")
   ) +
-  labs(x = "Theta Value", y = "Change in Total Stock (%)") +
+  labs(x = "Stock Mobility Parameter", y = "Change in Total Stock (%)") +
   theme_minimal() +
   geom_hline(yintercept=0, linetype="dashed") +
   facet_wrap(~theta, scales = "free", ncol = 2, labeller = labeller(theta = c(
@@ -308,15 +268,8 @@ diff_stock <- ggplot() +
   "D_ba" = "Dispersal to Fishing Patch (B to A)",
   "M_ab" = "Movement to Reserve Patch (A to B)",
   "M_ba" = "Movement to Fishing Patch (B to A)"))) +
-  ggtitle("Change from Cooperative Total Stock to Reserve Total Stock") +
+  #ggtitle("Change from Cooperative Total Stock to Reserve Total Stock") +
   theme(strip.text = element_text(size = 8)) +
-  scale_linetype_manual(
-    name = "Line Type",
-    values = c(
-      "1" = "dotted",
-      "2" = "solid"
-    )
-  ) +
   guides(linetype = FALSE)
 
 diff_stock
@@ -332,7 +285,7 @@ coop_to_res <- diff_npv + diff_stock +
 
 coop_to_res
 
-ggsave(here("visuals","output","coop_to_res_summary_rev.jpg"), coop_to_res, width = 15, height = 5)
+ggsave(here("visuals","output","coop_to_res_summary_rev2.jpg"), coop_to_res, width = 15, height = 5)
  
 ```
 

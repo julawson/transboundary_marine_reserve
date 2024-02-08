@@ -200,7 +200,7 @@ df_results_so = as.data.frame(results_matrix_so) %>% filter(timestep==100) %>% s
 
 # Calculate the number of combinations and time steps
 num_combinations <- length(x_a_grid) * length(x_b_grid)
-num_time_steps <- timesteps + 1  # Include time 0
+num_time_steps <- timesteps 
 
 # Calculate the number of iterations over D_ba
 num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
@@ -272,30 +272,31 @@ for(i in seq_along(x_a_grid)) {
       # Extract initial escapement (e_a_star) from df_inf
       e_a_star <- matrix_df[i, j]
       
-      for(t in 0:timesteps) {
+      for(t in 1:timesteps) {
         
-        if (t == 0) {
-          # At timestep 0, use initial values and e_a_star from matrix_df
+        if (t == 1) {
+          # At timestep 1, use initial values and e_a_star from matrix_df
           
-          x_a <- x_a_init
-          x_b <- x_b_init
           e_a_star <- matrix_df[i, j]
-          
-        } else {
-          
-          # At timesteps 1-100, update x_a and x_b based on previous values
+        
           x_a_new <- min((mu_a*M_aa*e_a_star + mu_b*M_ba*x_b + sigma_a*(D_aa*growth_a(e_a_star) + D_ba*growth_b(x_b))), k_a)
           x_b_new <- min((mu_b*M_bb*x_b + mu_a*M_ab*e_a_star + sigma_b*(D_bb*growth_b(x_b) + D_ab*growth_a(e_a_star))), k_b)
           
-          # Interpolate e_a_star using compute_e_a_star
-          e_a_star <- compute_e_a_star(x_a = x_a_new, x_b = x_b_new, df_inf)
-          
-          # Ensure e_a_star doesn't exceed x_a
-          e_a_star <- ifelse(e_a_star > x_a_new, x_a_new, e_a_star)
+        } else {
           
           # Update x_a and x_b
           x_a <- x_a_new
           x_b <- x_b_new
+        
+          # At timesteps 2-100, update x_a and x_b based on previous values
+          x_a_new <- min((mu_a*M_aa*e_a_star + mu_b*M_ba*x_b + sigma_a*(D_aa*growth_a(e_a_star) + D_ba*growth_b(x_b))), k_a)
+          x_b_new <- min((mu_b*M_bb*x_b + mu_a*M_ab*e_a_star + sigma_b*(D_bb*growth_b(x_b) + D_ab*growth_a(e_a_star))), k_b)
+        
+          # Interpolate e_a_star using compute_e_a_star
+          e_a_star <- compute_e_a_star(x_a = x_a, x_b = x_b, df_inf)
+        
+          # Ensure e_a_star doesn't exceed x_a
+          e_a_star <- ifelse(e_a_star > x_a, x_a, e_a_star)
         }
         
         # Calculate harvest based on e_star
@@ -349,7 +350,7 @@ results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ba", "
 
 ```{r}
 
-write.csv(results, here("data","outputs","low_high","theta_Dba_rev.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","high_high","theta_Dba_rev2.csv"), row.names=FALSE)
 
 ```
 

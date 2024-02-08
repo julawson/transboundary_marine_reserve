@@ -20,10 +20,10 @@ library(akima)
 
 # Initialize data frame for storing results
 
-num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(1, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
 num_cols <- 11  
 results_matrix_non <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
-colnames(results_matrix_non) <- c("D_ab", "D_ba", "timestep", "x_a_init", "x_a", "e_hat_a", "x_b_init", "x_b", "e_hat_b", "NPV_a_hat", "NPV_b_hat")
+colnames(results_matrix_non) <- c("M_ab", "M_ba", "timestep", "x_a_init", "x_a", "e_hat_a", "x_b_init", "x_b", "e_hat_b", "NPV_a_hat", "NPV_b_hat")
 
 row_counter <- 1
 
@@ -33,12 +33,12 @@ NPV_b_hat_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
 names(NPV_a_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 names(NPV_b_hat_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 
-for(D_ab in seq(0, 1, by = 0.1)) {
-      for(D_ba in seq(0, 1, by = 0.1)) {
+for(M_ab in seq(0, 1, by = 0.1)) {
+      for(M_ba in seq(0, 1, by = 0.1)) {
       
         # Recalculate dependent variables
-        D_aa = 1 - D_ab
-        D_bb = 1 - D_ba
+        M_aa = 1 - M_ab
+        M_bb = 1 - M_ba
   
 # Grid search over x_a_grid and x_b_grid
 for(i in seq_along(x_a_grid)) {
@@ -69,8 +69,8 @@ for(i in seq_along(x_a_grid)) {
   e_hat_b = e_b(x_b, h_b_val)
   
   # Update stocks in each patch
-  x_a_new = next_x_a(e_hat_a, e_hat_b) - mu_a*M_aa*e_hat_a - mu_b*M_ba*e_hat_b + mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b
-  x_b_new = next_x_b(e_hat_a, e_hat_b) - mu_b*M_bb*e_hat_b - mu_a*M_ab*e_hat_a + mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a
+  x_a_new = min(mu_a*M_aa*e_hat_a + mu_b*M_ba*e_hat_b + sigma_a*(D_aa*growth_a(e_hat_a) + D_ba*growth_b(e_hat_b)), k_a)
+  x_b_new = min(mu_b*M_bb*e_hat_b + mu_a*M_ab*e_hat_a + sigma_b*(D_bb*growth_b(e_hat_b) + D_ab*growth_a(e_hat_a)), k_b)
   
   # Value
   V_a_hat = b_a(p_a, c_a) * (x_a - e_hat_values$e_hat_a) * delta^(t-1)
@@ -81,7 +81,7 @@ for(i in seq_along(x_a_grid)) {
   NPV_b_hat <- NPV_b_hat + V_b_hat
   
   # Save results including e_hat_a and e_hat_b
-  results_matrix_non[row_counter, ] <- c(D_ab, D_ba, t, x_a_init, x_a, e_hat_values$e_hat_a, x_b_init, x_b, e_hat_values$e_hat_b, NPV_a_hat, NPV_b_hat)
+  results_matrix_non[row_counter, ] <- c(M_ab, M_ba, t, x_a_init, x_a, e_hat_values$e_hat_a, x_b_init, x_b, e_hat_values$e_hat_b, NPV_a_hat, NPV_b_hat)
   row_counter <- row_counter + 1
     
   # Update the stock for next iteration
@@ -109,10 +109,10 @@ df_results_non = as.data.frame(results_matrix_non) %>% filter(timestep==100) %>%
 
 # Initialize data frame for storing results
 
-num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(1, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
+num_rows <- length(x_a_grid) * length(x_b_grid) * timesteps * length(seq(0, 1, by = 0.1)) * length(seq(0, 1, by = 0.1))
 num_cols <- 11  
 results_matrix_so <- matrix(NA_real_, nrow = num_rows, ncol = num_cols)
-colnames(results_matrix_so) <- c("D_ab", "D_ba", "timestep", "x_a_init", "x_a", "e_star_a", "x_b_init", "x_b", "e_star_b", "NPV_a_star", "NPV_b_star")
+colnames(results_matrix_so) <- c("M_ab", "M_ba", "timestep", "x_a_init", "x_a", "e_star_a", "x_b_init", "x_b", "e_star_b", "NPV_a_star", "NPV_b_star")
 
 row_counter <- 1
 
@@ -122,12 +122,12 @@ NPV_b_star_total <- numeric(length = length(x_a_grid) * length(x_b_grid))
 names(NPV_a_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 names(NPV_b_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid))
 
-for(D_ab in seq(0, 1, by = 0.1)) {
-      for(D_ba in seq(0, 1, by = 0.1)) {
+for(M_ab in seq(0, 1, by = 0.1)) {
+      for(M_ba in seq(0, 1, by = 0.1)) {
       
         # Recalculate dependent variables
-        D_aa = 1 - D_ab
-        D_bb = 1 - D_ba
+        M_aa = 1 - M_ab
+        M_bb = 1 - M_ba
 
 # Grid search over x_a_grid and x_b_grid
 for(i in seq_along(x_a_grid)) {
@@ -158,8 +158,8 @@ for(i in seq_along(x_a_grid)) {
   e_star_b = e_b(x_b, h_b_val)
   
   # Update stocks in each patch
-  x_a_new = next_x_a(e_star_a, e_star_b) - mu_a*M_aa*e_star_a - mu_b*M_ba*e_star_b + mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b
-  x_b_new = next_x_b(e_star_a, e_star_b) - mu_b*M_bb*e_star_b - mu_a*M_ab*e_star_a + mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a
+  x_a_new = min(mu_a*M_aa*e_star_a + mu_b*M_ba*e_star_b + sigma_a*(D_aa*growth_a(e_star_a) + D_ba*growth_b(e_star_b)), k_a)
+  x_b_new = min(mu_b*M_bb*e_star_b + mu_a*M_ab*e_star_a + sigma_b*(D_bb*growth_b(e_star_b) + D_ab*growth_a(e_star_a)), k_b)
   
   # Value
   V_a_star = b_a(p_a, c_a) * (x_a - e_star_values$e_star_a) * delta^(t-1)
@@ -170,7 +170,7 @@ for(i in seq_along(x_a_grid)) {
   NPV_b_star <- NPV_b_star + V_b_star
   
   # Save results including e_hat_a and e_hat_b
-  results_matrix_so[row_counter, ] <- c(D_ab, D_ba, t, x_a_init, x_a, e_star_values$e_star_a, x_b_init, x_b, e_star_values$e_star_b, NPV_a_star, NPV_b_star)
+  results_matrix_so[row_counter, ] <- c(M_ab, M_ba, t, x_a_init, x_a, e_star_values$e_star_a, x_b_init, x_b, e_star_values$e_star_b, NPV_a_star, NPV_b_star)
   row_counter <- row_counter + 1
     
   # Update the stock for next iteration
@@ -228,31 +228,29 @@ df_inf = df_all %>% filter(time==1) %>% select(-time, -V_star)
 
 #II. Sole Owner Patch A (Reserve Scenario)
 
-# Single Value
-
 ```{r}
 
 # Calculate the number of combinations and time steps
 num_combinations <- length(x_a_grid) * length(x_b_grid)
 num_time_steps <- timesteps 
 
-# Calculate the number of iterations over D_ba and D_ab
-num_D_ba_iterations <- length(seq(0, 1, by = 0.1))
-num_D_ab_iterations <- length(seq(0, 1, by = 0.1))
+# Calculate the number of iterations over M_ba and M_ab
+num_M_ba_iterations <- length(seq(0, 1, by = 0.1))
+num_M_ab_iterations <- length(seq(0, 1, by = 0.1))
 
 # Calculate the maximum number of rows needed
-max_rows <- num_combinations * num_time_steps * num_D_ba_iterations * num_D_ab_iterations
+max_rows <- num_combinations * num_time_steps * num_M_ba_iterations * num_M_ab_iterations
 
 # Initialize NPV variables and counter
-num_cols <- 13
+num_cols <- 11
 results_matrix_soa <- matrix(NA_real_, nrow = max_rows, ncol = num_cols)
-colnames(results_matrix_soa) <- c("D_ba", "D_ab", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "V_a_star", "V_b_star", "NPV_ea_star")
+colnames(results_matrix_soa) <- c("M_ba", "M_ab", "timestep", "x_a_init", "x_a", "h_a_val", "e_a_star", "x_b_init", "x_b", "h_b_val", "NPV_ea_star")
 
 row_counter <- 1
 
 # Initialize NPV variables and counter
-NPV_ea_star_total <- numeric(length = num_combinations * num_D_ba_iterations * num_D_ab_iterations)
-names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_D_ba", 1:num_D_ba_iterations, "_D_ab", 1:num_D_ab_iterations)
+NPV_ea_star_total <- numeric(length = num_combinations * num_M_ba_iterations * num_M_ab_iterations)
+names(NPV_ea_star_total) <- paste0("x_a", 1:length(x_a_grid), "_x_b", 1:length(x_b_grid), "_M_ba", 1:num_M_ba_iterations, "_M_ab", 1:num_M_ab_iterations)
 
 # Grid search over x_a_grid and x_b_grid
 for(i in seq_along(x_a_grid)) {
@@ -262,15 +260,15 @@ for(i in seq_along(x_a_grid)) {
     x_a_init <- x_a_grid[i]
     x_b_init <- x_b_grid[j]
     
-    for(D_ba in seq(0, 1, by = 0.1)) {
-      for(D_ab in seq(0, 1, by = 0.1)) {
+    for(M_ba in seq(0, 1, by = 0.1)) {
+      for(M_ab in seq(0, 1, by = 0.1)) {
         # Recalculate dependent variables
-        D_bb = 1 - D_ba
-        D_aa = 1 - D_ab
+        M_bb = 1 - M_ba
+        M_aa = 1 - M_ab
  
         NPV_ea_star <- 0
     
-    # Recalculate df_inf for every new D_ba value
+    # Recalculate df_inf for every new M_ba value
       df_all = data.frame()  # Reset df_all
       V_next = matrix(0, size_x_a, size_x_b)
       V = matrix(0, size_x_a, size_x_b)
@@ -347,15 +345,15 @@ for(i in seq_along(x_a_grid)) {
         NPV_ea_star <- NPV_ea_star + V_a_star
         
         # Save results
-        results_matrix_soa[row_counter, ] <- c(D_ba, D_ab, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, V_a_star, V_b_star, NPV_ea_star)
+        results_matrix_soa[row_counter, ] <- c(M_ba, M_ab, t, x_a_init, x_a, h_a_val, e_a_star, x_b_init, x_b, h_b_val, NPV_ea_star)
         row_counter <- row_counter + 1
       }
     
     # Store NPV for the current x_a and x_b combination
-        index <- (i - 1) * length(x_b_grid) * num_D_ba_iterations * num_D_ab_iterations + 
-                 (j - 1) * num_D_ba_iterations * num_D_ab_iterations + 
-                 round(D_ba * 10) + 1 + 
-                 round(D_ab * 10) * num_D_ba_iterations + 1
+        index <- (i - 1) * length(x_b_grid) * num_M_ba_iterations * num_M_ab_iterations + 
+                 (j - 1) * num_M_ba_iterations * num_M_ab_iterations + 
+                 round(M_ba * 10) + 1 + 
+                 round(M_ab * 10) * num_M_ba_iterations + 1
         NPV_ea_star_total[index] <- NPV_ea_star
       }
     }
@@ -377,8 +375,8 @@ df_results_so_bind = df_results_so %>% rename (x_a_so = x_a) %>% rename (x_b_so 
 df_results_ea_bind = df_results_soa %>% rename (x_a_soa = x_a) %>% rename (x_b_soa = x_b)
 
 # Merging e_a_star values from df_inf into results based on x_a and x_b
-results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ab", "D_ba", "x_a_init", "x_b_init")) %>% 
-  left_join(df_results_ea_bind, by= c("D_ab", "D_ba","x_a_init", "x_b_init")) %>% 
+results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("M_ab", "M_ba", "x_a_init", "x_b_init")) %>% 
+  left_join(df_results_ea_bind, by= c("M_ab", "M_ba","x_a_init", "x_b_init")) %>% 
   mutate(WTP_A = NPV_ea_star-NPV_a_hat,
          WTA_B = NPV_b_hat) %>% 
   mutate(accept = WTP_A-WTA_B)
@@ -388,7 +386,7 @@ results <- df_results_non_bind %>% left_join(df_results_so_bind, by= c("D_ab", "
 
 ```{r}
 
-write.csv(results, here("data","outputs","mvmt_dispersal2.csv"), row.names=FALSE)
+write.csv(results, here("data","outputs","mvmt_dispersal_adult_rev2.csv"), row.names=FALSE)
 
 ```
 
